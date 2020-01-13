@@ -1,0 +1,103 @@
+https://lucene.apache.org/solr/guide/7_7/solr-tutorial.html#solr-tutorial
+Remember configs in this location
+example/cloud/node3/solr(solr.xml,zoo.cfg)
+
+1.
+./bin/solr start -e cloud -> for start Solr(boilerplate example)
+ 
+                              or
+./bin/solr start -c -p 8983 -s example/cloud/node1/solr
+
+This starts the first node. When it’s done start the second node, and tell it how to connect to to ZooKeeper:
+
+./bin/solr start -c -p 7574 -s example/cloud/node2/solr -z localhost:9983
+(If you have defined ZK_HOST in solr.in.sh/solr.in.cmd  you can omit -z  )
+
+
+For creating collection(s for shards ,rf for replication factor)
+bin/solr create -c <yourCollection> -s 2 -rf 2
+
+bin/solr delete -c techproducts - for deleting collection
+
+bin/solr stop -all - for stopping all nodes
+
+
+2.
+Posting data into solr
+bin/post -c techproducts example/exampledocs/*
+
+3.Search for a Single Term
+curl "http://localhost:8983/solr/techproducts/select?q=foundation"
+
+4.limiting query to a field
+Let’s say we want to find all the "electronics" products in the index. In the Query screen, enter "electronics" (without quotes) in the q box - this will search everywhere suppose field name is cat and u want search in it 
+
+cat:electronics
+http://localhost:8983/solr/techproducts/select?q=cat:electronics
+
+5.To search for a multi-term phrase, enclose it in double quotes: q="multiple terms here" /not working just place with quotes then working
+
+6.to search for both +electronics +connector
+Avoiding a term use -
+
+--------------------------
+
+1.bin/solr create -c films -s 2 -rf 2
+
+Whoa, wait. We didn’t specify a configSet! That’s fine, the _default is appropriately named, since it’s the default and is used if you don’t specify one at all.
+
+2.curl -X POST -H 'Content-type:application/json' --data-binary '{"add-field": {"name":"name", "type":"text_general", "multiValued":false, "stored":true}}' http://localhost:8983/solr/films/schema
+
+3.creating catchall field
+curl -X POST -H 'Content-type:application/json' --data-binary '{"add-copy-field" : {"source":"*","dest":"_text_"}}' http://localhost:8983/solr/films/schema
+
+4.
+to Index JSON Format
+bin/post -c films example/films/films.json
+
+C:\solr-7.7.0> java -jar -Dc=films -Dauto example\exampledocs\post.jar example\films\*.json
+To Index XML Format
+bin/post -c films example/films/films.xml
+
+C:\solr-7.7.0> java -jar -Dc=films -Dauto example\exampledocs\post.jar example\films\*.xml
+To Index CSV Format
+bin/post -c films example/films/films.csv -params "f.genre.split=true&f.directed_by.split=true&f.genre.separator=|&f.directed_by.separator=|"
+
+C:\solr-7.7.0> java -jar -Dc=films -Dparams=f.genre.split=true&f.directed_by.split=true&f.genre.separator=|&f.directed_by.separator=| -Dauto example\exampledocs\post.jar example\films\*.csv
+
+5.facets
+curl "http://localhost:8983/solr/films/select?q=*:*&rows=0&facet=true&facet.field=genre_str"
+
+6.
+curl "http://localhost:8983/solr/films/select?=&q=*:*&facet.field=genre_str&facet.mincount=200&facet=on&rows=0"
+
+
+7.curl 'http://localhost:8983/solr/films/select?q=*:*&rows=0'\
+    '&facet=true'\
+    '&facet.range=initial_release_date'\
+    '&facet.range.start=NOW-20YEAR'\
+    '&facet.range.end=NOW'\
+    '&facet.range.gap=%2B1YEAR'
+This will request all films and ask for them to be grouped by year starting with 20 years ago (our earliest release date is in 2000) and ending today. Note that this query again URL encodes a + as %2B.
+
+8.Another faceting type is pivot facets, also known as "decision trees", allowing two or more fields to be nested for all the various possible combinations. Using the films data, pivot facets can be used to see how many of the films in the "Drama" category (the genre_str field) are directed by a director. Here’s how to get at the raw data for this scenario:
+
+curl "http://localhost:8983/solr/films/select?q=*:*&rows=0&facet=on&facet.pivot=genre_str,directed_by_str"
+
+Deleting Data
+
+Execute the following command to delete a specific document:
+
+bin/post -c localDocs -d "<delete><id>SP2514N</id></delete>"
+
+To delete all documents, you can use "delete-by-query" command like:
+
+bin/post -c localDocs -d "<delete><query>*:*</query></delete>"
+
+
+
+
+
+https://app.gitbook.com/@sudheerr48/s/spark-solr/~/drafts/-LwivOAQ-ubvHchGTfTD/@drafts
+
+
